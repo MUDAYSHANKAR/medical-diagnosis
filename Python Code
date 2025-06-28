@@ -1,0 +1,97 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+import warnings
+
+warnings.filterwarnings('ignore')
+
+print("--- Step 1: Load and Prepare Data ---")
+
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv'
+column_names = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age', 'Outcome']
+df = pd.read_csv(url, header=None, names=column_names)
+
+print("Dataset loaded successfully.")
+print("First 5 rows of the dataset:")
+print(df.head())
+print("\nDataset Information:")
+df.info()
+
+print("\n\n--- Step 2: Handle Missing Values ---")
+
+cols_with_zeros = ['Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI']
+df[cols_with_zeros] = df[cols_with_zeros].replace(0, np.nan)
+
+for col in cols_with_zeros:
+    df[col].fillna(df[col].median(), inplace=True)
+
+print("Missing values (represented as 0) have been replaced with the median.")
+print("Number of null values after cleaning:")
+print(df.isnull().sum())
+
+print("\n\n--- Step 3: Define Features (X) and Target (y) and Split Data ---")
+
+X = df.drop('Outcome', axis=1)
+y = df['Outcome']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+print(f"Data split into training and testing sets.")
+print(f"Training set size: {X_train.shape[0]} samples")
+print(f"Testing set size: {X_test.shape[0]} samples")
+
+print("\n\n--- Step 4: Scale Features ---")
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+print("Features have been scaled using StandardScaler.")
+
+print("\n\n--- Step 5: Train the Machine Learning Model ---")
+
+model = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+model.fit(X_train_scaled, y_train)
+
+print("Model training complete.")
+print(f"Model used: {type(model).__name__}")
+
+print("\n\n--- Step 6: Evaluate the Model ---")
+
+y_pred = model.predict(X_test_scaled)
+accuracy = accuracy_score(y_test, y_pred)
+conf_matrix = confusion_matrix(y_test, y_pred)
+class_report = classification_report(y_test, y_pred)
+
+print("Model Evaluation on Test Data:")
+print("="*30)
+print(f"Accuracy: {accuracy:.4f}")
+print("\nConfusion Matrix:")
+print(conf_matrix)
+print("\nClassification Report:")
+print(class_report)
+
+print("\n\n--- Step 7: Predict on New Patient Data ---")
+
+new_patient_data = np.array([[5, 120, 72, 23, 30.5, 37.6, 0.45, 45]])
+
+print("New Patient Data (unscaled):")
+print(f"Features: {column_names[:-1]}")
+print(new_patient_data)
+
+new_patient_scaled = scaler.transform(new_patient_data)
+prediction = model.predict(new_patient_scaled)
+prediction_proba = model.predict_proba(new_patient_scaled)
+
+print("\nPrediction Results:")
+print("="*30)
+
+if prediction[0] == 1:
+    print("Predicted Outcome: The patient is likely DIABETIC.")
+else:
+    print("Predicted Outcome: The patient is likely NOT DIABETIC.")
+
+print(f"Prediction Probability [Not Diabetic, Diabetic]: {prediction_proba[0]}")
